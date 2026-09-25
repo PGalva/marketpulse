@@ -1,0 +1,34 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+$LOAD_PATH.unshift File.expand_path("../lib", __dir__)
+
+require "marketpulse"
+require "agent"
+require "claude_client"
+require "offline_claude"
+
+# CLAUDE_MODE=offline usa o Claude falso; sem chave válida, também cai no offline.
+key = ENV.fetch("ANTHROPIC_API_KEY", "")
+offline = ENV["CLAUDE_MODE"] == "offline" || !key.start_with?("sk-ant-")
+claude = offline ? OfflineClaude.new : ClaudeClient.new(api_key: key)
+
+agent = Agent.new(claude: claude, registry: MarketPulse.registry)
+
+# Garante acentos na entrada mesmo em terminais sem locale UTF-8
+$stdin.set_encoding("UTF-8")
+
+puts "MarketPulse #{offline ? '(modo OFFLINE, sem API)' : '(Claude API)'}"
+puts "Pergunte algo como: 'Como está a AAPL hoje?' (Ctrl+D para sair)"
+loop do
+  print "\n> "
+  question = $stdin.gets&.strip
+  break if question.nil?
+  next if question.empty?
+
+  begin
+    puts "\n#{agent.ask(question)}"
+  rescue ClaudeClient::Error => e
+    puts "Erro na API: #{e.message}"
+  end
+end

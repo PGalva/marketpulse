@@ -1,0 +1,27 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Chama uma tool diretamente, sem Claude nenhum no meio.
+#   bin/tool                                   → lista as tools e seus schemas
+#   bin/tool get_stock_quote '{"ticker":"AAPL"}' → executa a tool
+$LOAD_PATH.unshift File.expand_path("../lib", __dir__)
+
+require "json"
+require "marketpulse"
+
+registry = MarketPulse.registry
+name, raw_input = ARGV
+
+if name.nil?
+  puts JSON.pretty_generate(registry.definitions)
+  exit
+end
+
+begin
+  input = JSON.parse(raw_input || "{}")
+  puts JSON.pretty_generate(registry.call(name, input))
+rescue JSON::ParserError
+  abort "Input inválido: passe um JSON entre aspas simples, ex.: '{\"ticker\":\"AAPL\"}'"
+rescue StandardError => e
+  abort "Erro (#{e.class}): #{e.message}"
+end
