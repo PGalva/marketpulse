@@ -1,0 +1,8 @@
+services:
+  chat:
+    build: .
+    env_file: .env        # injeta a ANTHROPIC_API_KEY sem colocá-la na imagem
+    stdin_open: true      # equivale ao -i: mantém o teclado conectado
+    tty: true             # equivale ao -t: terminal interativo
+    volumes:
+      - .:/app            # espelha o código local: editou, rodou de novo, sem rebuild

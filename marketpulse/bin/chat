@@ -1,0 +1,29 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+$LOAD_PATH.unshift File.expand_path("../lib", __dir__)
+
+require "claude_client"
+require "agent"
+require "fake_market_client"
+require "tools/registry"
+require "tools/stock_quote_tool"
+
+registry = Tools::Registry.new
+registry.register(Tools::StockQuoteTool.new(market_client: FakeMarketClient.new))
+
+agent = Agent.new(claude: ClaudeClient.new, registry: registry)
+
+puts "MarketPulse (fase 1). Pergunte algo como: 'Como está a AAPL hoje?' (Ctrl+D para sair)"
+loop do
+  print "\n> "
+  question = $stdin.gets&.strip
+  break if question.nil?
+  next if question.empty?
+
+  begin
+    puts "\n#{agent.ask(question)}"
+  rescue ClaudeClient::Error => e
+    puts "Erro na API: #{e.message}"
+  end
+end
