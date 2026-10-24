@@ -1,0 +1,27 @@
+{
+  "id": "chatcmpl-1",
+  "object": "chat.completion",
+  "model": "qwen2.5:3b",
+  "choices": [
+    {
+      "index": 0,
+      "finish_reason": "tool_calls",
+      "message": {
+        "role": "assistant",
+        "content": "",
+        "tool_calls": [
+          {
+            "id": "call_abc",
+            "type": "function",
+            "function": { "name": "get_stock_quote", "arguments": "{\"ticker\":\"AAPL\"}" }
+          },
+          {
+            "id": "",
+            "type": "function",
+            "function": { "name": "get_stock_quote", "arguments": "{ticker: MSFT" }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+# Três processos e um banco:
+#   chat       → PROCESSO 2: conversa, só lê previsões
+#   scheduler  → PROCESSO 1: job diário, sem IA e sem tokens
+#   db         → PostgreSQL (preços, previsões, placar)
+#   ollama     → IA local e gratuita (opcional: --profile ollama)
+
+x-app: &app
+  build: .
+  env_file:
+    - path: .env
+      required: false
+  environment:
+    DATABASE_URL: postgres://marketpulse:marketpulse@db:5432/marketpulse
+  depends_on:
+    db:
+      condition: service_healthy
+  volumes:
+    - .:/app
+
+services:
+  chat:
+    <<: *app
+    stdin_open: true
+    tty: true
+
+  scheduler:
+    <<: *app
+    command: ["ruby", "bin/scheduler"]
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: marketpulse
+      POSTGRES_PASSWORD: marketpulse
+      POSTGRES_DB: marketpulse
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U marketpulse"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  ollama:
+    image: ollama/ollama
+    profiles: ["ollama"]
+    volumes:
+      - ollama:/root/.ollama   # modelos são pesados: baixa uma vez só
+    ports:
+      - "11434:11434"
+
+volumes:
+  pgdata:
+  ollama:

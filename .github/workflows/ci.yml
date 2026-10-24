@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: Testes (com PostgreSQL)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: marketpulse
+          POSTGRES_PASSWORD: marketpulse
+          POSTGRES_DB: marketpulse
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U marketpulse"
+          --health-interval 3s --health-timeout 3s --health-retries 20
+    env:
+      DATABASE_URL: postgres://marketpulse:marketpulse@localhost:5432/marketpulse
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - run: bundle exec rake test
+
+  test-sem-banco:
+    name: Testes (sem banco, stdlib pura)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+      - run: rake test
+
+  docker:
+    name: Build da imagem
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t marketpulse .

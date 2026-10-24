@@ -1,0 +1,44 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# PROCESSO 2: o chat. Só lê previsões; quem as produz é o job.
+$LOAD_PATH.unshift File.expand_path("../lib", __dir__)
+require "marketpulse"
+
+$stdin.set_encoding("UTF-8")
+$stdout.sync = true
+
+storage = MarketPulse::Storage.build
+client = MarketPulse.market_client
+
+# Sem banco, a memória começa vazia a cada execução: roda o job uma vez
+# aqui mesmo para que forecast_price tenha o que ler.
+if storage.memory?
+  puts "Sem DATABASE_URL: dados em memória. Treinando os modelos antes de começar..."
+  MarketPulse.daily_job(storage: storage, client: client).run
+end
+
+provider = MarketPulse::LLM.build(logger: $stdout)
+agent = MarketPulse::Chat::Agent.new(provider: provider,
+                                     registry: MarketPulse.registry(storage: storage, client: client))
+
+puts "\nMarketPulse · IA: #{provider.name} (#{provider.model}) · dados: #{client.name} · banco: #{storage.kind}"
+puts "Exemplos: 'Como está a AAPL?'  'Qual a previsão da PETR4?'  (/reset limpa a conversa, Ctrl+D sai)"
+
+loop do
+  print "\n> "
+  question = $stdin.gets&.strip
+  break if question.nil?
+  next if question.empty?
+  if question == "/reset"
+    agent.reset!
+    puts "Conversa reiniciada."
+    next
+  end
+
+  begin
+    puts "\n#{agent.ask(question)}"
+  rescue MarketPulse::LLM::Error => e
+    puts "Erro no provider de IA: #{e.message}"
+  end
+end

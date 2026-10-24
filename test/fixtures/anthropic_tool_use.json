@@ -1,0 +1,11 @@
+{
+  "id": "msg_01",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-sonnet-5-5",
+  "stop_reason": "tool_use",
+  "content": [
+    { "type": "text", "text": "Vou buscar a cotação." },
+    { "type": "tool_use", "id": "toolu_01", "name": "get_stock_quote", "input": { "ticker": "AAPL" } }
+  ]
+}

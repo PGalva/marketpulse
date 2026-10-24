@@ -1,0 +1,27 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Agendador mínimo: roda o job uma vez por dia, após o horário configurado.
+# É um loop simples de propósito, para você ver o que um cron faz.
+#   FORECAST_HOUR_UTC  hora (0-23) a partir da qual roda; padrão 22
+#                      (depois do fechamento da bolsa de Nova York)
+$LOAD_PATH.unshift File.expand_path("../lib", __dir__)
+require "marketpulse"
+
+$stdout.sync = true
+hour = Integer(ENV.fetch("FORECAST_HOUR_UTC", "22"))
+storage = MarketPulse::Storage.build
+last_run = nil
+
+puts "Scheduler ativo: job diário a partir das #{hour}h UTC (banco: #{storage.kind})"
+trap("TERM") { exit }
+
+loop do
+  now = Time.now.utc
+  if now.hour >= hour && last_run != now.to_date
+    puts "[#{now.iso8601}] Rodando o job diário"
+    MarketPulse.daily_job(storage: storage).run
+    last_run = now.to_date
+  end
+  sleep 60
+end

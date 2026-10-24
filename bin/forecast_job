@@ -1,0 +1,15 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# PROCESSO 1: sincroniza dados, avalia previsões antigas, re-treina e prevê.
+# Não usa nenhuma IA e não gasta tokens. Pode rodar quantas vezes quiser:
+# é idempotente.
+$LOAD_PATH.unshift File.expand_path("../lib", __dir__)
+require "marketpulse"
+
+$stdout.sync = true
+storage = MarketPulse::Storage.build
+warn "Aviso: sem DATABASE_URL, as previsões ficam só em memória e somem ao sair." if storage.memory?
+
+results = MarketPulse.daily_job(storage: storage).run
+exit(results.values.all? ? 0 : 1)
