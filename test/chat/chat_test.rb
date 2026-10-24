@@ -51,6 +51,7 @@ class AgentTest < Minitest::Test
 
     assert_match(/PETR4: previsão/, answer)
     assert_match(/reversão à média/, answer)
+    assert_match(/Direção: [\d.]+% de chance de alta/, answer)
   end
 end
 
@@ -83,6 +84,18 @@ class ForecastPriceToolTest < Minitest::Test
     assert_includes out[:backtest].keys, :beats_baseline
     assert_equal 0, out[:scoreboard][:evaluated]
     assert_match(/Não é recomendação/, out[:disclaimer])
+  end
+
+  def test_inclui_a_direcao_com_precisao_e_baseline
+    client = MarketPulse::MarketData::FakeClient.new(today: Date.new(2026, 10, 23), days: 300)
+    MarketPulse.daily_job(storage: @storage, client: client, logger: nil).run
+    direction = tool.execute("ticker" => "PETR4")[:direction]
+
+    assert_includes 0.0..100.0, direction[:prob_up_pct]
+    assert_equal 60.0, direction[:threshold_pct]
+    assert_includes direction[:backtest].keys, :baseline_up_days_pct
+    assert_includes [true, false], direction[:backtest][:beats_baseline]
+    assert_equal 0, tool.execute("ticker" => "PETR4")[:scoreboard][:up_signals]
   end
 end
 

@@ -54,7 +54,19 @@ module MarketPulse
 
   def self.daily_job(storage:, client: market_client, env: ENV, logger: $stdout)
     Forecasting::DailyJob.new(client: client, prices: storage.prices, forecasts: storage.forecasts,
-                              tickers: tickers(client, env), logger: logger)
+                              tickers: tickers(client, env), logger: logger, direction: direction(env))
+  end
+
+  # Classificador de direção (ADR-005). Horizontes e threshold vêm do .env
+  # para dar para experimentar sem mexer no código:
+  #   DIRECTION_HORIZONS=2,5,20,60   DIRECTION_THRESHOLD=0.6   DIRECTION=off
+  def self.direction(env = ENV)
+    return nil if env["DIRECTION"].to_s.strip.downcase == "off"
+
+    horizons = env["DIRECTION_HORIZONS"].to_s.split(",").map(&:strip).reject(&:empty?).map { |h| Integer(h) }
+    horizons = Forecasting::Features::DEFAULT_HORIZONS if horizons.empty?
+    threshold = Float(env.fetch("DIRECTION_THRESHOLD", "0.6"))
+    ->(closes) { Forecasting::Direction.run(closes, horizons: horizons, threshold: threshold) }
   end
 
   def self.registry(storage:, client: market_client)

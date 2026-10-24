@@ -66,7 +66,17 @@ module MarketPulse
         def forecast_line(d)
           "- #{d['ticker']}: previsão #{format('%+.2f', d['predicted_return_pct'])}% para o próximo pregão " \
             "(faixa #{d['range']['low']}–#{d['range']['high']}); padrão: #{d['pattern']}; " \
-            "o modelo #{d.dig('backtest', 'beats_baseline') ? 'superou' : 'NÃO superou'} o baseline."
+            "o modelo #{d.dig('backtest', 'beats_baseline') ? 'superou' : 'NÃO superou'} o baseline." +
+            direction_text(d["direction"])
+        end
+
+        def direction_text(dir)
+          return "" unless dir
+
+          b = dir["backtest"]
+          precision = b["precision_pct"] ? "#{b['precision_pct']}%" : "sem sinais"
+          " Direção: #{dir['prob_up_pct']}% de chance de alta (#{dir['signal']}); precisão #{precision} " \
+            "vs #{b['baseline_up_days_pct']}% de dias de alta (#{b['verdict']})."
         end
       end
     end

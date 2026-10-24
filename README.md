@@ -98,11 +98,26 @@ Escolha modelos marcados com suporte a **tools** no catálogo do Ollama. Modelos
 
 ## A previsão
 
+O job diário treina dois modelos, que respondem perguntas diferentes e são salvos juntos.
+
+**Quanto vai variar?** ([ADR-004](docs/adr/004-modulos-e-dois-processos.md))
+
 - **Modelo:** `retorno_amanhã = peso × retorno_hoje`, treinado por mínimos quadrados. Peso positivo indica momentum; negativo, reversão à média; perto de zero (|t| < 2), nenhum padrão.
 - **Baseline:** "amanhã = hoje". O modelo só vale se errar menos que ele.
-- **Backtest walk-forward:** treina só com o passado, prevê o dia seguinte, avança. Nenhum dado do futuro entra no treino.
-- **Placar:** cada previsão é comparada com o preço real no pregão seguinte.
 - **Saída:** sempre uma faixa de preço (~95%), nunca um número único.
+
+**Vai subir?** ([ADR-005](docs/adr/005-previsao-de-direcao.md), inspirado no tutorial [*Predict The Stock Market With Machine Learning*](https://youtu.be/1O_BenficgE) do Dataquest)
+
+- **Features:** quanto o preço está acima da média móvel e quantos dias subiram, em horizontes de 2, 5, 20 e 60 pregões.
+- **Modelo:** regressão logística em Ruby puro, que devolve a probabilidade de alta.
+- **Threshold:** só diz "alta" quando a probabilidade passa de 60%.
+- **Métrica:** precisão (dos dias em que disse alta, quantos subiram) contra o baseline de "% de dias que sobem". Só conta como vitória com z ≥ 2, para não confundir sorte com padrão.
+- **Configuração:** `DIRECTION_HORIZONS`, `DIRECTION_THRESHOLD` e `DIRECTION=off` no `.env`.
+
+**Para os dois:**
+
+- **Backtest walk-forward:** treina só com o passado, prevê o que vem depois, avança. Nenhum dado do futuro entra no treino.
+- **Placar:** cada previsão é comparada com o preço real no pregão seguinte.
 
 ## Comandos
 
@@ -129,10 +144,10 @@ Incluem fixtures das APIs reais, contratos compartilhados para providers, tools 
 
 ```
 bin/                           chat, forecast_job, scheduler, tool
-db/migrations/                 tabelas price_bars e forecasts
+db/migrations/                 tabelas price_bars e forecasts (com colunas de direção)
 lib/marketpulse.rb             raiz de composição (conecta tudo pelo .env)
 lib/marketpulse/market_data/   Bar, FakeClient, StooqClient, repositórios de preço
-lib/marketpulse/forecasting/   features, modelos, backtest, DailyJob, repositórios de previsão
+lib/marketpulse/forecasting/   features, modelos (retorno e direção), backtests, DailyJob, repositórios
 lib/marketpulse/llm/           formato neutro e providers
 lib/marketpulse/chat/          Agent, Registry e tools
 test/                          Minitest, fixtures e teste de arquitetura
@@ -145,6 +160,7 @@ docs/adr/                      decisões de arquitetura
 - [ADR-002: Duck typing para o registro de tools](docs/adr/002-duck-typing-para-registro-de-tools.md)
 - [ADR-003: Camada de LLM agnóstica de provider](docs/adr/003-camada-de-llm-agnostica.md)
 - [ADR-004: Módulos e dois processos](docs/adr/004-modulos-e-dois-processos.md)
+- [ADR-005: Previsão de direção com classificador, threshold e precisão](docs/adr/005-previsao-de-direcao.md)
 
 ## Roadmap
 
@@ -152,6 +168,7 @@ docs/adr/                      decisões de arquitetura
 - [x] **IA agnóstica.** Formato neutro, Claude, Ollama, offline e fallback.
 - [x] **Previsão com rigor.** Modelo de um peso, baseline, backtest walk-forward, placar e job diário.
 - [x] **Dados e banco.** Stooq, PostgreSQL e repositórios.
+- [x] **Direção.** Classificador com features multi-horizonte, threshold, precisão e teste de significância.
 - [ ] **Contrato de tools.** `search_ticker` e `get_fundamentals`.
 - [ ] **Web.** Sinatra, chat em vanilla JS e streaming.
 - [ ] **Expansão.** Volatilidade, notícias e sentimento.

@@ -43,11 +43,13 @@ module MarketPulse
         private
 
         FLOATS = %i[weight t_stat last_close predicted_return predicted_close low high mae baseline_mae hit_rate].freeze
+        # Podem ser NULL: avaliação ainda pendente ou direção indisponível (ADR-005).
+        OPTIONAL_FLOATS = %i[actual_close prob_up direction_threshold direction_precision direction_up_rate].freeze
 
         def to_forecast(row)
           attrs = COLUMNS.to_h { |c| [c, row[c]] }
           FLOATS.each { |c| attrs[c] = attrs[c].to_f }
-          attrs[:actual_close] = attrs[:actual_close]&.to_f
+          OPTIONAL_FLOATS.each { |c| attrs[c] = attrs[c]&.to_f }
           Forecast.new(**attrs)
         end
       end
